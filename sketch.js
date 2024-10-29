@@ -116,10 +116,9 @@ function setup() {
     draw() {
       this.setStyles()
       rect(this.x, this.y, this.w, this.h)
-      // marker_rect(this.x, this.y, this.w, this.h)
       this.unSetStyles()
       
-      this.sections.forEach(section => {
+      this.sections.forEach((section) => {
         section.draw()
       })
     }
@@ -142,7 +141,7 @@ function setup() {
       noStroke();
     }
     
-    drawContent(content) {
+    drawContent() {
       switch (this.content) {
         case "door":
           console.log("door");
