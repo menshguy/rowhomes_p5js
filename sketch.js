@@ -1,24 +1,28 @@
-let b, mask;
+let buffers = [];
+let cw = 600;
+let ch = 600;
 
 function setup() {
-  createCanvas(600, 600);
-  noLoop();
+  createCanvas(cw, ch);
   colorMode(HSL);
-  mask = loadImage('./mask.png')
 }
 
 function draw() {
   background("antiquewhite");
   noStroke();
+  noLoop();
 
-  const h = random(200, 600);
-  const w = random(100, 600);
+  // Clear the graphics buffers
+  buffers.forEach(buffer => { buffer?.clear() })
+
+  //Draw Rowhome
+  const h = random(ch/3, ch);
+  const w = random(ch/6, cw);
   const x = (width - w) / 2;
   const y = height;
   const rowhome = new Rowhome(x, y, w, h);
   rowhome.generateFloors();
   rowhome.draw();
-  drawShadows();
 }
 
 class Rowhome {
@@ -35,7 +39,7 @@ class Rowhome {
     let c = ['window', 'circle'];
     let reducer = {remainder: this.h, original: this.h};
     let basement = [{
-      h: getFloorHeight({min:0, max:30}, reducer),
+      h: getFloorHeight({min:20, max:40}, reducer),
       sections: {
         proportions: getSectionProportions(numSections),
         contents: [random(c), random(c), random(c), random(c), random(c)]
@@ -64,8 +68,6 @@ class Rowhome {
     }]
 
     let floorConfigs = [...basement, ...mainFloor, ...middleFloors, ...topFloor];
-    console.log("test", floorConfigs)
-    
     floorConfigs.forEach((config, i) => {
       let {x, y, w} = this;
       let {h, sections} = config;
@@ -75,8 +77,15 @@ class Rowhome {
     })
   }
 
+  drawFullHouseForTesting(){
+    fill("red")
+    rect(this.x, height - this.h, this.w, this.h)
+    noFill()
+  }
+
   draw() {
-      this.floors.forEach(floor => floor.draw());
+    this.drawFullHouseForTesting()
+    this.floors.forEach(floor => floor.draw());
   }
 }
 
@@ -86,28 +95,39 @@ class Floor {
     this.y = y;
     this.w = w;
     this.h = h;
-    this.sections = this.generateSections(sections);
     this.i = i;
+    this.fills = [color(23, 100, 94), color(193, 100, 84), color(324, 100, 94), color(14, 100, 87)];
+    this.sections = this.generateSections(sections);
   }
 
   generateSections(sections) {
-    let {x, y, w, h} = this;
+    let {x, y, w, h, fills, i} = this;
     let {proportions, contents} = sections;
 
     let curr_x = x;
     let section_w = w / sumArray(proportions);
+    let stroke_c = 'black'
+    let fill_c = fills[i]
     return proportions.map((proportion, i) => {
       let curr_w = proportion * section_w;
-      let section = new Section(curr_x, y, curr_w, h, contents[i]);
+      
+      let section = new Section(
+        curr_x, 
+        y, 
+        curr_w, 
+        h, 
+        contents[i],
+        stroke_c,
+        fill_c
+      );
       curr_x = curr_x + curr_w;
       return section;
     })
   }
 
   setStyles() {
-    let fills = ["#FFCDAE", "#AEEEFF", "#FFAEDE", "#F9FF8C"]
     stroke("black");
-    fill(fills[this.i])
+    fill(this.fills[this.i])
   }
 
   unSetStyles() {
@@ -117,45 +137,79 @@ class Floor {
 
   draw() {
     this.setStyles()
-    rect(this.x, this.y, this.w, this.h)
+    marker_rect(this.x, this.y, this.w, this.h, color(40, 59, 79), this.fills[this.i])
     this.unSetStyles()
       
     this.sections.forEach((section) => {
-      section.draw()
+      if (section.w) section.draw()
     })
   }
 }
 
 class Section {
-  constructor(x, y, w, h, content){
+  constructor(x, y, w, h, content, stroke_c, fill_c){
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
     this.content = content;
+    this.stroke_c = stroke_c;
+    this.fill_c = fill_c;
   }
 
   setStyles() {
-    stroke("rgb(255,255,255)")
+    stroke(this.stroke_c)
+    fill(this.fill_c)
   }
 
   unSetStyles() {
     noStroke();
+    noFill()
+  }
+
+  drawShadows() {
+    if (this.w <= 0 || this.h <= 0) {
+      console.error("Invalid buffer dimensions", this.w, this.h);
+      return;
+    }
+
+    let shadowBuffer = createGraphics(this.w, this.h);
+    let shadowMaskBuffer = createGraphics(this.w, this.h);
+    buffers.push(shadowBuffer, shadowMaskBuffer); // This will let us clear all buffers later
+
+    drawShadows(0, 0, this.w, this.h, shadowBuffer);
+
+    shadowMaskBuffer.fill("black");
+    shadowMaskBuffer.rect(0, 0, this.w, this.h);
+    shadowMaskBuffer.noFill();
+
+    let shadowImage = shadowBuffer.get(); // Get the current state of the graphics buffers
+    let shadowMask = shadowMaskBuffer.get();
+    // shadowImage.filter(BLUR, 1)
+    
+    shadowImage.mask(shadowMask); // Use the mask on the image
+    
+    blendMode(BURN);
+    image(shadowImage, this.x, this.y);
+    blendMode(BLEND); // Reset blend mode to default
   }
 
   drawContent() {
+    let originalColor = this.fill_c
+    let darkenedColor = color(
+      hue(originalColor), 
+      saturation(originalColor), 
+      max(0, lightness(originalColor) - 10)
+    );
     switch (this.content) {
       case "door":
-        console.log("door");
-        drawDoor(this.x, this.y, this.w, this.h, "#FEF828")
+        drawDoor(this.x, this.y, this.w, this.h, darkenedColor)
         break;
       case "window":
-        drawWindow(this.x, this.y, this.w, this.h, "#C8FFBF")
-        console.log("door");
+        drawWindow(this.x, this.y, this.w, this.h, darkenedColor)
         break;
       case "circle":
-        drawCircle(this.x, this.y, this.w, this.h, "#FFBFFA")
-        console.log("circle");
+        drawWindow(this.x, this.y, this.w, this.h, darkenedColor)
         break;
       default:
         console.error("Section content does not exist")
@@ -165,9 +219,12 @@ class Section {
 
   draw () {
     this.setStyles();
-    rect(this.x, this.y, this.w, this.h);
-    this.drawContent()
+    // marker_rect(this.x, this.y, this.w, this.h);
     this.unSetStyles();
+
+    this.drawContent();
+
+    this.drawShadows();
   }
 }
 
@@ -190,29 +247,23 @@ function drawDoor (x, y, w, h, fill_c) {
 }
 
 function drawWindow (x, y, w, h, fill_c) {
-  console.log("window")
-  // x,y should always be relative to the current section, so 
   let sx = x + 5;
   let sy = y + 5;
   let sw = w - 10;
   let sh = h - 10;
 
-  console.log("window2")
   fill(fill_c);
   rect(sx, sy, sw, sh); 
   noFill();
-
 }
 
 function drawCircle (x, y, w, h, fill_c) {
-  console.log("window")
   // x,y should always be relative to the current section, so 
   let sx = x + 5;
   let sy = y + 5;
   let sw = w - 10;
   let sh = h - 10;
 
-  console.log("window2")
   fill(fill_c);
   rect(sx, sy, sw, sh); 
   noFill();
@@ -236,35 +287,33 @@ function getFloorHeight(range, reducer) {
 }
 
 function getSectionProportions(sections) {
-  let min_sections = sections, 
-    max_sections = sections, 
-    total_units = sections;
   // Will create an array of min_sections/max_sections indexes, filled with numbers that add up to total_units.
-
+  
   // Randomly choose a number of indices/sections (between min and max)
-  let numIndices = floor(random(min_sections, max_sections + 1)); // Random number between min_sections and max_sections
+  let numIndices = sections; // Random number between min_sections and max_sections
   let array = new Array(numIndices).fill(0); // Initialize the array with zeros
 
-  for (let i = 0; i < numIndices - 1; i++) {
+  let remaining_units = sections;
+  for (let i = 0; i < numIndices; i++) {
     // Generate a random number that will not exceed the remaining total_units
-    let value = floor(random(1, total_units));
+    let value = floor(random(0, remaining_units));
     array[i] = value;
-    total_units -= value; // Decrease the total by the assigned value
+    remaining_units = remaining_units - value < 0 ? 0 : remaining_units - value; // Decrease the total by the assigned value
   }
 
   // Assign the last index to the remaining total
-  array[numIndices - 1] = total_units;
+  array[numIndices - 1] = remaining_units;
 
   return array;
 }
 
-function mousePressed(){
-  redraw();
-}
-
 
 // -- MARKERS -- //
-function marker_rect (x, y, w, h) {
+function marker_rect (x, y, w, h, stroke_c = "black", fill_c = "white") {
+  
+  stroke(stroke_c)
+  rect(x, y, w, h)
+
   for (let i = 0; i < 3; i++) {  // Draw multiple lines to make it look rough
     let xOffset = random(-5, 4);  // Random offset for sketchy effect
     let yOffset = random(-5, 6);
@@ -303,39 +352,27 @@ function marker_rect (x, y, w, h) {
   }
 }
 
+function drawShadows(_x, _y, w, h, buffer) {
+  let lineSpacing = 6;  // Spacing between squiggly lines
+  let length = 20;       // Length of each squiggly line
+  let angle = PI / 4;    // Direction for all lines (45 degrees)
 
-function drawShadows(){
-  // Circle parameters
-  let cx = width / 2;
-  let cy = height / 2;
-  let r = 150; // Radius of the circle
-  let lineSpacing = 12; // Spacing between lines
-  let length = 40; // Length of each squiggly line
-  let angle = PI / 4; // Direction for all lines (45 degrees)
-
-  for (let y = cy - r; y < cy + r; y += lineSpacing) {
-    for (let x = cx - r; x < cx + r; x += lineSpacing) {
-      // Only draw lines within the circular boundary
-      if (dist(cx, cy, x, y) < r) {
-          drawSquigglyLine(x, y, length, angle, cx, cy, r);
-      }
+  for (let y = _y; y < h; y += lineSpacing) {
+    for (let x = _x; x < w; x += lineSpacing) {
+      drawSquigglyLine(x, y, length, angle, buffer);
     }
   }
-
-  // Draw the circle outline on top
-  stroke("black");
-  strokeWeight(2);
-  noFill();
-  ellipse(cx, cy, r * 2);
 }
 
 // Function to draw a single squiggly line
-function drawSquigglyLine(x, y, length, angle, cx, cy, r) {
+function drawSquigglyLine(x, y, length, angle, buffer) {
   let segments = floor(length / 5); // Number of small segments in the line
-  let amp = 1;  // Amplitude of squiggle
-  stroke("rgb(0,0,0)");
-  strokeWeight(1);
-  beginShape();
+  let amp = 1;                  // Amplitude of squiggle
+  buffer.stroke("grey")
+  buffer.strokeWeight(0.5);                // Thinner lines for finer ink-like detail
+  // buffer.stroke(0);                        // Black ink for squiggle lines
+
+  buffer.beginShape();
   for (let i = 0; i < segments; i++) {
     let offsetX = cos(angle) * i * 5 + sin(angle) * random(-amp, amp);
     let offsetY = sin(angle) * i * 5 + cos(angle) * random(-amp, amp);
@@ -343,30 +380,12 @@ function drawSquigglyLine(x, y, length, angle, cx, cy, r) {
     let px = x + offsetX;
     let py = y + offsetY;
 
-    // Only add vertex if point is within the circle
-    if (dist(cx, cy, px, py) < r) {
-      vertex(px, py);
-    } else {
-      endShape(); // Ends the shape if it goes out of bounds
-      beginShape(); // Start a new shape to continue with points inside
-    }
+    buffer.vertex(px, py);
   }
-  endShape();
+  buffer.endShape();
 }
 
-// function drawSquigglyLines() {
-
-//   let spacing = random(10, 20);
-//   let startX = random(50, width - 50);
-//   let startY = random(50, height - 50);
-
-//   for (let i = 0; i < 10; i++) {
-//     let x = startX + i * spacing;
-//     let y = startY + sin(i) * 10; // Use sin function for squiggles
-//     line(x, startY, x, y);
-//   }
-// }
-
-// function drawShadows() {
-//   drawSquigglyLines(); // Call squiggly lines drawing
-// }
+// -- Events -- //
+function mousePressed(){
+  redraw();
+}
