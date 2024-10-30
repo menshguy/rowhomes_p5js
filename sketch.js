@@ -38,15 +38,28 @@ class Rowhome {
       {min:100, max:150, proportion:random(0.25, 0.5), content:['circle', 'window']},
     ] // TODO: Randomize this so the number of floors changes
     this.numCols = random([1,2,2,3,3,3,4,4,4,4,5])
-    this.col_proportions = new Array(this.configs.length).fill( // TODO: Make size of columns dynamic/random
-      new Array(this.numCols).fill(1)
-    ); 
-    this.floors = this.generateFloors(x,y,w,h,this.numCols,this.configs);
+    this.colProportions = this.generateColProportions(this.configs.length, this.numCols)
+    this.floors = this.generateFloors();
     console.log("floors", this.floors)
+  }
+
+  // Returns: [[0,0,1,3], [2,1,0,1], [1,1,1,1]]
+  // each nested array represents a floor, and each number represents the proportion of the floor taken up by that section/col
+  generateColProportions(numFloors, numCols) {
+    let remainder = numCols;
+    let randomProportions = new Array(numCols).fill(0);
+    let final = randomProportions.map(p => {
+      let value = floor(random(0, remainder + 1))
+      remainder -= value;
+      console.log("num", remainder, value)
+      return value;
+    })
+    if (remainder > 0) final[final.length - 1] += remainder //assign any remaining value to last index
+    return new Array(numFloors).fill(final) //return array of arrays 
   }
   
   generateFloors() {
-    let {x, y, w, h, configs, col_proportions} = this
+    let {x, y, w, h, configs, colProportions} = this
     let floorProportionSum = configs.reduce((a, b) => a + b.proportion, 0);
     
     const floors = configs.map((config, i) => {
@@ -54,7 +67,7 @@ class Rowhome {
       let floor_h = h/floorProportionSum * config.proportion //find each floors height based on asigned proportion
       y -= floor_h; // move y up so that floor can be drawn correctly
   
-      let cols = this.generateCols(x, y, w, floor_h, this.col_proportions[i], config.content)
+      let cols = this.generateCols(x, y, w, floor_h, colProportions[i], config.content)
       let floor = new Floor(x, y, w, floor_h, cols, i)
       return floor
     })
@@ -62,7 +75,7 @@ class Rowhome {
     return floors;
   }
   
-  // Generates an array of Sections, with x,y,w,h & content data needed to draw each section
+  // Generates an array of Columns, with x,y,w,h & content data needed to draw each section
   generateCols(x,y,w,h, colProportions, content){
     let {numCols} = this;
     let col_x = x;
