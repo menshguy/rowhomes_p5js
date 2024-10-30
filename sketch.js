@@ -30,7 +30,7 @@ class Rowhome {
     this.y = y;
     this.w = w;
     this.h = h;
-    this.floors = this.generateFloors([
+    this.floors = this.generateFloors(x, y, w, h, [
       {min:20,  max:80,  proportion:random(0.25, 0.5), content:['window']},
       {min:100, max:200, proportion:random(1, 2),      content:['door', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
@@ -40,13 +40,11 @@ class Rowhome {
     console.log("floors", this.floors, "numCols", this.numCols)
   }
   
-  generateFloors(configs) {
-    let {x, y, w, h} = this
-    let floorProportionSum = configs.reduce((a, b) => a + b.proportion, 0);
-    
+  generateFloors(x, y, w, h, configs) {
+    let sum = configs.reduce((a, b) => a + b.proportion, 0); //sum of all proportions
     const floors = configs.map((config, i) => {
-      let floor_h = h/floorProportionSum * config.proportion //find each floors height based on asigned proportion
-      y -= floor_h; // move y up so that floor can be drawn correctly
+      let floor_h = h/sum * config.proportion //find each floors height based on asigned proportion
+      y -= floor_h; // move y up so that floor can be drawn from correct x,y coord
   
       let cols = this.generateCols(x, y, w, floor_h, configs.length, config.content)
       let floor = new Floor(x, y, w, floor_h, cols, i)
@@ -56,13 +54,13 @@ class Rowhome {
     return floors;
   }
   
+  // Returns [Section, Section, Section, etc]
   // Generates an array of Columns, with x,y,w,h & content data needed to draw each section
-  generateCols(x,y,w,h,numFloors,content){
+  generateCols(x, y, w, h, numFloors, content){
     let numCols = random([2,2,3,3,3,4,4,4,4,5])
     let colProportions = this.generateColProportions(numFloors, numCols)
     let col_x = x;
     return colProportions.map((col_p, i) => {
-      console.log("p", colProportions)
       let col_w = w/numCols * col_p[i]
       let col = new Section(col_x, y, col_w, h, random(content));
       col_x += col_w;
@@ -75,14 +73,14 @@ class Rowhome {
   generateColProportions(numFloors, numCols) {
     let remainder = numCols;
     let arr = new Array(numCols).fill(0); //create array with length equal to number of columns
-    let randomProportions = arr.map(p => { //fill array with random proportion
+    let r = arr.map(p => { //fill array with random proportion values
       let value = floor(random(0, remainder + 1))
       remainder -= value;
       return value;
     })
-    if (remainder > 0) randomProportions[randomProportions.length - 1] += remainder //assign any remaining value to last index
-    if (random([0,1])) shuffleArray(randomProportions); //randomly shuffle order
-    return new Array(numFloors).fill(randomProportions) //return array of arrays 
+    if (remainder > 0) r[r.length - 1] += remainder //assign any remaining value to last index
+    if (random([0,1])) shuffleArray(r); //randomly shuffle order
+    return new Array(numFloors).fill(r) //return array of arrays 
   }
 
   drawFullHouseForTesting(){
@@ -254,48 +252,6 @@ function drawAwning (x, y, w, h, fill_c) {
   fill(fill_c)
   quad(x, y, x+w, y+10, x-10, y+10, x+w+10, y+10); // quad(x1, y1, x2, y2, x3, y3, x4, y4)
   noFill()
-}
-
-//-- Gets --//
-
-function getFloorHeight(range, reducer) {
-  let randomValue = Math.random() * (range.max - range.min) + range.min;
-  let floor_height = (randomValue / reducer.remainder) * reducer.original;
-  return floor_height;
-}
-
-function getSectionProportions(sections) {
-  let numIndices = sections; // Random number between min_sections and max_sections
-  let array = new Array(numIndices).fill(0); // Initialize the array with zeros
-
-  let remaining_units = sections;
-  for (let i = 0; i < numIndices; i++) {
-    let value = floor(random(0, remaining_units));
-    array[i] = value;
-    remaining_units = remaining_units - value < 0 ? 0 : remaining_units - value; // Decrease the total by the assigned value
-  }
-
-  array[numIndices - 1] = remaining_units; // Assign the last index to the remaining units
-
-  return random([0,1]) ? shuffleArray(array) : array;
-}
-
-function getFloorProportions(numFloors, h){
-  let numIndices = numFloors;
-  let array = new Array(numIndices).fill(0); // Initialize the array with zeros
-
-  let remaining_units = sections;
-  for (let i = 0; i < numIndices; i++) {
-    // Generate a random number that will not exceed the remaining total_units
-    let value = floor(random(0, remaining_units));
-    array[i] = value;
-    remaining_units = remaining_units - value < 0 ? 0 : remaining_units - value; // Decrease the total by the assigned value
-  }
-
-  // Assign the last index to the remaining total
-  array[numIndices - 1] = remaining_units;
-
-  return array;
 }
 
 // -- MARKERS -- //
