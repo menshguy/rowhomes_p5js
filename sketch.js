@@ -80,11 +80,12 @@ class Rowhome {
     this.fill_c = fill_c;
     this.stroke_c = stroke_c;
     this.configs = [
-      {min:20,  max:80,  proportion:random([0, random(0.25, 0.5)]), content:['window']},
-      {min:100, max:200, proportion:random(1, 2),      content:['window', 'window']},
-      {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
-      {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
-      {min:100, max:150, proportion:random([0, random(0.25, 1)]), content:['circle', 'window']},
+      {min:0,   max:80,  proportion:random([0, random(0.05, 0.1)]),    content:['window']},
+      {min:100, max:200, proportion:random(0.25, 0.35),                content:['window', 'window']},
+      {min:100, max:150, proportion:random([0, random(0.2, 0.25)]),    content:['circle', 'window']},
+      {min:0,   max:150, proportion:random([0, random(0.2, 0.25)]),    content:['circle', 'window']},
+      {min:0,   max:150, proportion:random([0, random(0.2, 0.25)]),    content:['circle', 'window']},
+      {min:0,   max:150, proportion:random([0, random(0.05, 0.15)]),   content:['circle', 'window']},
     ]
     this.floors = this.generateFloors();
     this.numFloors = this.configs.length
@@ -101,7 +102,10 @@ class Rowhome {
     let {x, y, w, h, configs} = this
     let psum = configs.reduce((a, b) => a + b.proportion, 0); //sum of all proportions
     const floors = configs.map((config, i) => {
+      //TODO: Fix this so that the total height is never exceeded
       let floor_h = h/psum * config.proportion //find each floors height based on asigned proportion
+      if (floor_h > config.max) floor_h = config.max;
+      if (floor_h < config.min) floor_h = config.min;
       y -= floor_h; // move y up so that floor can be drawn from correct x,y coord
       let cols = this.generateCols(x, y, w, floor_h, configs.length, config.content)
       let floor = new Floor(x, y, w, floor_h, cols, i)
@@ -164,7 +168,7 @@ class Floor {
     this.h = h;
     this.cols = cols;
     this.i = i;
-    this.fills = [color(23, 100, 94), color(193, 100, 84), color(324, 100, 94), color(14, 100, 87), color(84, 100, 87)];
+    this.fills = [color(23, 100, 94), color(163, 100, 84), color(324, 100, 94), color(14, 100, 87), color(84, 100, 87), color(204, 100, 87), color(294, 100, 87)];
   }
 
   setStyles() {
