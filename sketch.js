@@ -8,18 +8,21 @@ function setup() {
 }
 
 function draw() {
-  background("antiquewhite");
+  // background("antiquewhite");
+  background(183, 52, 88);
   noStroke();
   noLoop();
 
   // Clear the graphics buffers
   buffers.forEach(buffer => { buffer?.clear() })
 
+  let bottom = 25;
+
   //Draw Main Rowhome
   const h = random(ch/3, ch);
   const w = random(ch/6, cw);
   const x = (width - w) / 2;
-  const y = height;
+  const y = height - bottom;
   let fill_c = color(23, 100, 54)
   const rowhome = new Rowhome(x, y, w, h, fill_c);
   rowhome.draw();
@@ -28,7 +31,7 @@ function draw() {
   const lh = random(ch/3, ch);
   const lw = random(ch/6, cw);
   const lx = (x - lw) - 2; //start at the main rowhom x and move over to the left by this rowhomes w
-  const ly = height;
+  const ly = height - bottom;
   let fill_lc = color(23, 100, 94)
   const rowhome_left = new Rowhome(lx, ly, lw, lh, fill_lc)
   rowhome_left.draw();
@@ -37,42 +40,67 @@ function draw() {
   const rh = random(ch/3, ch);
   const rw = random(ch/6, cw);
   const rx = (x + w) + 2; //start at the main rowhom x and move over to the right by main row home w
-  const ry = height;
+  const ry = height - bottom;
   let fill_rc = color(23, 100, 94)
   const rowhome_right = new Rowhome(rx, ry, rw, rh, fill_rc)
   rowhome_right.draw();
+
+  //If there is still space to the left, draw yet another home (TODO: Make more dynamic)
+  if (lx > 0) {
+    const l2h = random(ch/3, ch);
+    const l2w = random(ch/6, cw);
+    const l2x = (lx - l2w) - 2; 
+    const l2y = height - bottom;
+    let fill_l2c = color(23, 100, 94)
+    const rowhome_left = new Rowhome(l2x, l2y, l2w, l2h, fill_l2c)
+    rowhome_left.draw();
+  }
+
+  //If there is still space to the right, draw yet another home (TODO: Make more dynamic)
+  if (rx + rw < width) {
+    const r2h = random(ch/3, ch);
+    const r2w = random(ch/6, cw);
+    const r2x = (rx + rw) + 2; 
+    const r2y = height - bottom;
+    let fill_r2c = color(23, 100, 94)
+    const rowhome_right = new Rowhome(r2x, r2y, r2w, r2h, fill_r2c)
+    rowhome_right.draw();
+  }
 }
 
 class Rowhome {
-  constructor (x, y, w, h, fill_c="orange") {
+  constructor (x, y, w, h, fill_c="orange", stroke_c="black") {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
-    this.fill_c=fill_c
-    this.floors = this.generateFloors(x, y, w, h, fill_c, [
+    this.fill_c = fill_c;
+    this.stroke_c = stroke_c;
+    this.configs = [
       {min:20,  max:80,  proportion:random(0.25, 0.5), content:['window']},
       {min:100, max:200, proportion:random(1, 2),      content:['door', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
       {min:100, max:150, proportion:random(0.25, 0.5), content:['circle', 'window']},
-    ]);
+    ]
+    this.floors = this.generateFloors();
+    this.numFloors = this.configs.length
     
-    // -- TESTS -- //
-    console.log("floors", this.floors)
-    console.log("~~~TESTS~~~")
-    let s = this.floors.reduce((a, b) => a + b.h, 0);
-    console.log(floor(this.h) === floor(s) ? "PASSED" : "FAILED", ": Height equals sum of floors", this.h, s)
+    // -- TESTS/LOGS -- //
+    // console.log("floors", this.floors)
+    // console.log("~~~TESTS~~~")
+    // let s = this.floors.reduce((a, b) => a + b.h, 0);
+    // console.log(floor(this.h) === floor(s) ? "PASSED" : "FAILED", ": Height equals sum of floors", this.h, s)
   }
   
   // Returns [Floor, Floor, Floor, ...]
-  generateFloors(x, y, w, h, fill_c, configs) {
-    let sum = configs.reduce((a, b) => a + b.proportion, 0); //sum of all proportions
+  generateFloors() {
+    let {x, y, w, h, configs} = this
+    let psum = configs.reduce((a, b) => a + b.proportion, 0); //sum of all proportions
     const floors = configs.map((config, i) => {
-      let floor_h = h/sum * config.proportion //find each floors height based on asigned proportion
+      let floor_h = h/psum * config.proportion //find each floors height based on asigned proportion
       y -= floor_h; // move y up so that floor can be drawn from correct x,y coord
-  
-      let cols = this.generateCols(x, y, w, floor_h, fill_c, configs.length, config.content)
+      let cols = this.generateCols(x, y, w, floor_h, configs.length, config.content)
       let floor = new Floor(x, y, w, floor_h, cols, i)
       return floor
     })
@@ -82,7 +110,8 @@ class Rowhome {
   
   // Returns [Section, Section, Section, etc]
   // Generates an array of Columns, with x,y,w,h & content data needed to draw each section
-  generateCols(x, y, w, h, fill_c, numFloors, content){
+  generateCols(x, y, w, h, numFloors, content){
+    let {fill_c} = this;
     let numCols = random([2,2,3,3,3,4,4,4,4,5])
     let colProportions = this.generateColProportions(numFloors, numCols)
     let col_x = x;
