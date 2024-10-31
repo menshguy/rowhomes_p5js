@@ -81,10 +81,10 @@ class Rowhome {
     this.stroke_c = stroke_c;
     this.configs = [
       {min:20,  max:80,  proportion:random([0, random(0.25, 0.5)]), content:['window']},
-      {min:100, max:200, proportion:random(1, 2),      content:['door', 'window']},
+      {min:100, max:200, proportion:random(1, 2),      content:['window', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
-      {min:100, max:150, proportion:random(0.25, 0.5), content:['circle', 'window']},
+      {min:100, max:150, proportion:random([0, random(0.25, 1)]), content:['circle', 'window']},
     ]
     this.floors = this.generateFloors();
     this.numFloors = this.configs.length
