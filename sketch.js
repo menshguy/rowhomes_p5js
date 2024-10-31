@@ -45,6 +45,9 @@ function draw() {
   const rowhome_right = new Rowhome(rx, ry, rw, rh, fill_rc)
   rowhome_right.draw();
 
+  //Draw Sidewalk
+  marker_rect(0, height-bottom, width, bottom, color(204, 14, 60))
+
   //If there is still space to the left, draw yet another home (TODO: Make more dynamic)
   if (lx > 0) {
     const l2h = random(ch/3, ch);
@@ -77,7 +80,7 @@ class Rowhome {
     this.fill_c = fill_c;
     this.stroke_c = stroke_c;
     this.configs = [
-      {min:20,  max:80,  proportion:random(0.25, 0.5), content:['window']},
+      {min:20,  max:80,  proportion:random([0, random(0.25, 0.5)]), content:['window']},
       {min:100, max:200, proportion:random(1, 2),      content:['door', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
       {min:100, max:150, proportion:random(1, 1.5),    content:['circle', 'window']},
@@ -258,11 +261,13 @@ class Section {
   }
 
   draw () {
-    this.setStyles();
-    marker_rect(this.x, this.y, this.w, this.h);
-    this.unSetStyles();
-    this.drawContent();
-    this.drawShadows();
+    if (this.h !== 0 && this.w !== 0) {
+      this.setStyles();
+      marker_rect(this.x, this.y, this.w, this.h, this.fill_c);
+      this.unSetStyles();
+      this.drawContent();
+      this.drawShadows();
+    }
   }
 }
 
@@ -314,9 +319,10 @@ function drawAwning (x, y, w, h, fill_c) {
 }
 
 // -- MARKERS -- //
-function marker_rect (x, y, w, h, stroke_c = "black", fill_c = "white") {
+function marker_rect (x, y, w, h, fill_c = "white", stroke_c = "black") {
   
   stroke(stroke_c)
+  fill(fill_c)
   rect(x, y, w, h)
 
   for (let i = 0; i < 3; i++) {  // Draw multiple lines to make it look rough
@@ -355,6 +361,9 @@ function marker_rect (x, y, w, h, stroke_c = "black", fill_c = "white") {
       y + h + random(-2, 2)
     );
   }
+
+  noStroke()
+  noFill()
 }
 
 function drawShadows(_x, _y, w, h, buffer) {
