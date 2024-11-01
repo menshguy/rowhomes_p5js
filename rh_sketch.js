@@ -14,8 +14,8 @@ function setup() {
   const w = random(ch/6, cw);
   const x = (width - w) / 2;
   const y = height - bottom;
-  let fill_c = color(23, 100, 54)
-  const rowhome = new Rowhome(x, y, w, h, fill_c);
+  const fill_c = color(23, 100, 54)
+  const rowhome = new Rowhome({x, y, w, h, fill_c});
   rowhomes.push(rowhome)
 
   //Draw a rowhome to the left
@@ -23,8 +23,8 @@ function setup() {
   const lw = random(ch/6, cw);
   const lx = (x - lw) - 2; //start at the main rowhom x and move over to the left by this rowhomes w
   const ly = height - bottom;
-  let fill_lc = color(23, 100, 94)
-  const rowhome_left = new Rowhome(lx, ly, lw, lh, fill_lc)
+  const fill_lc = color(23, 100, 94)
+  const rowhome_left = new Rowhome({x:lx, y:ly, w:lw, h:lh, fill_c:fill_lc})
   rowhomes.push(rowhome_left)
 
   //Draw a rowhome to the right
@@ -32,29 +32,29 @@ function setup() {
   const rw = random(ch/6, cw);
   const rx = (x + w) + 2; //start at the main rowhom x and move over to the right by main row home w
   const ry = height - bottom;
-  let fill_rc = color(23, 100, 94)
-  const rowhome_right = new Rowhome(rx, ry, rw, rh, fill_rc)
+  const fill_rc = color(23, 100, 94)
+  const rowhome_right = new Rowhome({x:rx, y:ry, w:rw, h:rh, fill_c:fill_rc})
   rowhomes.push(rowhome_right)
 
   //If there is still space to the left, draw yet another home (TODO: Make more dynamic)
   if (lx > 0) {
-    const l2h = random(ch/3, ch);
-    const l2w = random(ch/6, cw);
-    const l2x = (lx - l2w) - 2; 
-    const l2y = height - bottom;
-    let fill_l2c = color(23, 100, 94)
-    const rowhome_left = new Rowhome(l2x, l2y, l2w, l2h, fill_l2c)
+    const h = random(ch/3, ch);
+    const w = random(ch/6, cw);
+    const x = (lx - w) - 2; 
+    const y = height - bottom;
+    const fill_c = color(23, 100, 94)
+    const rowhome_left = new Rowhome({x, y, w, h, fill_c})
     rowhomes.push(rowhome_left)
   }
 
   //If there is still space to the right, draw yet another home (TODO: Make more dynamic)
   if (rx + rw < width) {
-    const r2h = random(ch/3, ch);
-    const r2w = random(ch/6, cw);
-    const r2x = (rx + rw) + 2; 
-    const r2y = height - bottom;
-    let fill_r2c = color(23, 100, 94)
-    const rowhome_right = new Rowhome(r2x, r2y, r2w, r2h, fill_r2c)
+    const h = random(ch/3, ch);
+    const w = random(ch/6, cw);
+    const x = (rx + w) + 2; 
+    const y = height - bottom;
+    const fill_c = color(23, 100, 94)
+    const rowhome_right = new Rowhome({x, y, w, h, fill_c})
     rowhomes.push(rowhome_right)
   }
 }
@@ -70,7 +70,8 @@ function draw() {
 }
 
 class Rowhome {
-  constructor (x, y, w, h, fill_c="orange", stroke_c="black") {
+  constructor ({x, y, w, h, fill_c="red", stroke_c="black"}) {
+    Object.assign(this, {x, y, w, h, fill_c, stroke_c})
     this.x = x;
     this.y = y;
     this.w = w;
@@ -123,29 +124,36 @@ class Rowhome {
     let {fill_c, numFloors} = this;
     let {content} = config
     let numCols = random([2,2,3,3,3,4,4,4,4,5])
+    let sectionProportions = getSectionProportions(numCols)
+    let sections = getSections(sectionProportions, numCols)
+    return sections;
     
     //create an array populated with the proportion value of each section
-    let floorSections = [];
-    let remainder = numCols;
-    for (let j = 0; j < numCols; j++) {
-      // if it's the last index, we assign the remainder to the last index
-      let value = j === numCols - 1 ? remainder : floor(random(0, remainder + 1));
-      remainder -= value;
-      floorSections.push(value);
+    function getSectionProportions(numCols) {
+      let sectionProportions = [];
+      let remainder = numCols;
+      for (let j = 0; j < numCols; j++) {
+        // if it's the last index, we assign the remainder to the last index
+        let value = j === numCols - 1 ? remainder : floor(random(0, remainder + 1));
+        remainder -= value;
+        sectionProportions.push(value);
+      }
+      return sectionProportions;
     }
     
+    
     //Use the proportion values generated above to calculate the actual width of each section
-    let sx = x;
-    return floorSections.map((sectionSize) => {
-      let sw = (w/numCols) * sectionSize
-      let floorSection = new FloorSection({
-        x:sx, y, w:sw, h, 
-        content: random(content), 
-        fill_c
-      });
-      sx += sw;
-      return floorSection;
-    })
+    function getSections(sectionProportions, numCols) {
+      let sx = x;
+      return sectionProportions.map(p => {
+        let sw = (w/numCols) * p
+        let floorSection = new FloorSection({
+          x:sx, y, w:sw, h, content: random(content), fill_c
+        });
+        sx += sw;
+        return floorSection;
+      })
+    }
   }
 
   drawFullHouseForTesting(){
@@ -211,7 +219,7 @@ class FloorSection {
     }
   }
 
-  drawShadows() {
+  drawTexture() {
     if (this.w <= 0 || this.h <= 0) {
       console.error("Invalid buffer dimensions", this.w, this.h);
       return;
@@ -221,7 +229,7 @@ class FloorSection {
     let shadowMaskBuffer = createGraphics(this.w, this.h);
     buffers.push(shadowBuffer, shadowMaskBuffer); // This will let us clear all buffers later
 
-    drawShadows(0, 0, this.w, this.h, shadowBuffer);
+    drawTextureHatches(0, 0, this.w, this.h, shadowBuffer);
 
     shadowMaskBuffer.fill("black");
     shadowMaskBuffer.rect(0, 0, this.w, this.h);
@@ -243,7 +251,7 @@ class FloorSection {
       this.setStyles();
       this.drawFloorBG();
       this.drawContent();
-      this.drawShadows();
+      this.drawTexture();
       this.unSetStyles();
     }
   }
@@ -344,7 +352,7 @@ function marker_rect (x, y, w, h, fill_c = "white", stroke_c = "black") {
   noFill()
 }
 
-function drawShadows(_x, _y, w, h, buffer) {
+function drawTextureHatches(_x, _y, w, h, buffer) {
   let lineSpacing = 6;  // Spacing between squiggly lines
   let length = 20;       // Length of each squiggly line
   let angle = PI / 4;    // Direction for all lines (45 degrees)
