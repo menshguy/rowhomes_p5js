@@ -1,70 +1,104 @@
 let cw = 600;
 let ch = 600;
-let bottom;
+let bottom = 100;
 let x1, x2, y1, y2, endX, endY;
-let startPoint = {x:100, y: 200}
-let endPoint = {x:400, y:400}
-let controlPoints = [
-  {x: 200, y: 400}, 
-  {x: 200, y: 50}
-]
+let lines = []
 
 function setup() {
   createCanvas(cw, ch);
   colorMode(HSL);
+  let numLines = 3
+  
+  for (let i = 0; i < numLines; i++) {
+    let lineLength = 400
+    let startPoint = {x:cw/2, y:ch-bottom};
+    let endPoint = {x:(cw/2) + random(-50, 50), y:ch-bottom-lineLength}
+    lines.push({
+      startPoint,
+      endPoint,
+      controlPoints: [
+        {
+          x: startPoint.x, 
+          y: startPoint.y-random(50,ch-bottom)
+        }, {
+          x: random(cw/2-200, cw/2+200),
+          y: endPoint.y+random(0, startPoint.y-random(50,ch-bottom))
+        }
+      ]
+    })
+  }
 }
 
 function draw() {
   background("antiquewhite");
 
-  beginShape();
-  vertex(startPoint.x, startPoint.y)
-  bezierVertex(
-    controlPoints[0].x, controlPoints[0].y,
-    controlPoints[1].x, controlPoints[1].y,
-    endPoint.x, endPoint.y
-  )
-  endShape();
+ 
+  //Draw the Lines
+  lines.forEach(l => {
+    let {startPoint, controlPoints, endPoint} = l
 
-  //Draw Anchor Points
-  stroke("black");
-  strokeWeight(5);
-  point(startPoint.x, startPoint.y)
-  point(endPoint.x, endPoint.y)
-  //Draw Control Points for Reference
-  stroke("red");
-  strokeWeight(5);
-  controlPoints.forEach(p => {
-    line()
-    point(p.x, p.y)
+    //Style the line
+    stroke(color(15, 28, 47))
+    strokeWeight(2);
+    noFill()
+    beginShape();
+    vertex(startPoint.x, startPoint.y)
+    bezierVertex(
+      controlPoints[0].x, controlPoints[0].y,
+      controlPoints[1].x, controlPoints[1].y,
+      endPoint.x, endPoint.y
+    )
+    endShape();
+  
+    //Draw Anchor Points
+    stroke("black");
+    strokeWeight(5);
+    point(startPoint.x, startPoint.y)
+    point(endPoint.x, endPoint.y)
+    
+    //Draw Control Points for Reference
+    stroke("red");
+    strokeWeight(5);
+    controlPoints.forEach(p => {
+      point(p.x, p.y)
+    })
+  
+    //Connect Control Points to Anchor Points
+    stroke("red")
+    strokeWeight(1);
+    line(startPoint.x, startPoint.y, controlPoints[0].x, controlPoints[0].y)
+    line(endPoint.x, endPoint.y, controlPoints[1].x, controlPoints[1].y)
   })
-
-  //Connect Control Points to Anchor Points
-  stroke("red")
-  strokeWeight(1);
-  line(startPoint.x, startPoint.y, controlPoints[0].x, controlPoints[0].y)
-  line(endPoint.x, endPoint.y, controlPoints[1].x, controlPoints[1].y)
 }
 
 function mousePressed() {
-  controlPoints.forEach(p => {
-    if (dist(mouseX, mouseY, p.x, p.y) < 10) {
-      p.isDragging = true;
+  lines.forEach(line => {
+    let p = line.controlPoints
+    let x1 = p[0].x
+    let y1 = p[0].y
+    let x2 = p[1].x
+    let y2 = p[1].y
+    if (dist(mouseX, mouseY, x1, y1) < 10) {
+      line.isDragging = {i: 0};
+    }
+    if (dist(mouseX, mouseY, x2, y2) < 10) {
+      line.isDragging = {i: 1};
     }
   });
 }
 
 function mouseDragged() {
-  controlPoints.forEach(p => {
-    if (p.isDragging) {
-      p.x = mouseX;
-      p.y = mouseY;
+  lines.forEach(line => {
+    let p = line.controlPoints
+    if (line.isDragging) {
+      p[line.isDragging.i].x = mouseX;
+      p[line.isDragging.i].y = mouseY;
     }
   });
 }
 
 function mouseReleased() {
-  controlPoints.forEach(p => {
-    p.isDragging = false;
+  lines.forEach(line => {
+    line.isDragging = false;
   });
 }
