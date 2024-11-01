@@ -89,13 +89,6 @@ class Rowhome {
     this.numFloors = this.configs.length;
     this.totalHeight = this.configs.reduce((a, b) => a + b.proportion, 0); //sum of floor all proportions. Needed to calculate floor heights
     this.allFloors = this.generateAllFloors();
-    
-    // -- TESTS/LOGS -- //
-    console.log("allFloors", this.allFloors)
-    // console.log("~~~TESTS~~~")
-    // let s = this.floors.reduce((a, b) => a + b.h, 0);
-    // console.log(floor(this.h) === floor(s) ? "PASSED" : "FAILED", ": Height equals sum of floors")
-    console.log(this.allFloors.length === this.configs.length ? "PASSED" : "FAILED", "allFloors === configs.length")
   }
   
   /**
@@ -186,8 +179,9 @@ class FloorSection {
   }
 
   setStyles() {
-    let {fill_c, stroke_c} = this;
-    stroke(stroke_c)
+    let {fill_c, fill_c_dark, stroke_c} = this;
+    stroke(fill_c_dark)
+    strokeWeight(1)
     fill(fill_c)
   }
 
