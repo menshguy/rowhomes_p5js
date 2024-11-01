@@ -17,7 +17,6 @@ function setup() {
   let fill_c = color(23, 100, 54)
   const rowhome = new Rowhome(x, y, w, h, fill_c);
   rowhomes.push(rowhome)
-  // rowhome.draw();
 
   //Draw a rowhome to the left
   const lh = random(ch/3, ch);
@@ -26,7 +25,6 @@ function setup() {
   const ly = height - bottom;
   let fill_lc = color(23, 100, 94)
   const rowhome_left = new Rowhome(lx, ly, lw, lh, fill_lc)
-  // rowhome_left.draw();
   rowhomes.push(rowhome_left)
 
   //Draw a rowhome to the right
@@ -36,7 +34,6 @@ function setup() {
   const ry = height - bottom;
   let fill_rc = color(23, 100, 94)
   const rowhome_right = new Rowhome(rx, ry, rw, rh, fill_rc)
-  // rowhome_right.draw();
   rowhomes.push(rowhome_right)
 
   //If there is still space to the left, draw yet another home (TODO: Make more dynamic)
@@ -47,7 +44,6 @@ function setup() {
     const l2y = height - bottom;
     let fill_l2c = color(23, 100, 94)
     const rowhome_left = new Rowhome(l2x, l2y, l2w, l2h, fill_l2c)
-    // rowhome_left.draw();
     rowhomes.push(rowhome_left)
   }
 
@@ -59,25 +55,18 @@ function setup() {
     const r2y = height - bottom;
     let fill_r2c = color(23, 100, 94)
     const rowhome_right = new Rowhome(r2x, r2y, r2w, r2h, fill_r2c)
-    // rowhome_right.draw();
     rowhomes.push(rowhome_right)
   }
 }
 
 function draw() {
-  // background("antiquewhite");
   background(183, 52, 88);
   noStroke();
   noLoop();
-
-  // Clear the graphics buffers
-  buffers.forEach(buffer => { buffer?.clear() })
-
-  // Draw rowhomes
-  rowhomes.forEach(rowhome => rowhome.draw())
-
-  //Draw Sidewalk
-  marker_rect(0, height-bottom, width, bottom, color(204, 14, 60))
+  
+  buffers.forEach(buffer => { buffer?.clear() }) // Clear the graphics buffers
+  rowhomes.forEach(rowhome => rowhome.draw()) // Draw rowhomes
+  marker_rect(0, height-bottom, width, bottom, color(204, 14, 60)) // Draw Sidewalk
 }
 
 class Rowhome {
@@ -96,139 +85,130 @@ class Rowhome {
       {min:0,   max:150, proportion:random([0, random(0.2, 0.25)]),    content:['circle', 'window']},
       {min:20,   max:150, proportion:random(0.05, 0.25),               content:['circle', 'window']},
     ]
-    this.floors = this.generateFloors();
-    this.numFloors = this.configs.length
+    this.numFloors = this.configs.length;
+    this.totalHeight = this.configs.reduce((a, b) => a + b.proportion, 0); //sum of floor all proportions. Needed to calculate floor heights
+    this.allFloors = this.generateAllFloors();
     
     // -- TESTS/LOGS -- //
-    console.log("floors", this.floors)
+    console.log("allFloors", this.allFloors)
     // console.log("~~~TESTS~~~")
     // let s = this.floors.reduce((a, b) => a + b.h, 0);
-    // console.log(floor(this.h) === floor(s) ? "PASSED" : "FAILED", ": Height equals sum of floors", this.h, s)
+    // console.log(floor(this.h) === floor(s) ? "PASSED" : "FAILED", ": Height equals sum of floors")
+    console.log(this.allFloors.length === this.configs.length ? "PASSED" : "FAILED", "allFloors === configs.length")
   }
   
-  // Returns [Floor, Floor, Floor, ...]
-  generateFloors() {
-    let {x, y, w, h, configs} = this
-    let psum = configs.reduce((a, b) => a + b.proportion, 0); //sum of all proportions
-    const floors = configs.map((config, i) => {
+  /**
+   * Generates all the x,y,w,h and content data for each floor in the home.
+   * @returns {Array} returns a nested array for FloorSections, 
+   * @example [[x,y,w,h,content,fill_c, stroke_c], ...]
+   */
+  generateAllFloors() {
+    let {x, y, w, h, totalHeight, configs} = this;
+    return configs.map((config, i) => {
       //TODO: Fix this so that the total height is never exceeded
-      let floor_h = h/psum * config.proportion //find each floors height based on asigned proportion
-      if (floor_h > config.max) floor_h = config.max;
-      if (floor_h < config.min) floor_h = config.min;
-      y -= floor_h; // move y up so that floor can be drawn from correct x,y coord
-      let cols = this.generateCols(x, y, w, floor_h, configs.length, config.content)
-      let floor = new Floor(x, y, w, floor_h, cols, i)
-      return floor
+      let fh = h/totalHeight * config.proportion; //find each floors height based on asigned proportion
+      if (fh > config.max) fh = config.max;
+      if (fh < config.min) fh = config.min;
+      y -= fh;
+      return this.generateFloorSections({x, y, w, h:fh, config})
     })
-  
-    return floors;
   }
   
-  // Returns [Section, Section, Section, etc]
-  // Generates an array of Columns, with x,y,w,h & content data needed to draw each section
-  generateCols(x, y, w, h, numFloors, content){
-    let {fill_c} = this;
+  /**
+   * Generates all the x,y,w,h and content data for each FloorSection and returns a nestary array of FloorSections
+   * @returns {Array} returns a nested array for FloorSections, [[x,y,w,h,content,fill_c, stroke_c],[x,y,w,h,content], ...]
+   * @example [FloorSection, FloorSection, ...]
+   */
+  generateFloorSections({x, y, w, h, config}){
+    let {fill_c, numFloors} = this;
+    let {content} = config
     let numCols = random([2,2,3,3,3,4,4,4,4,5])
-    let colProportions = this.generateColProportions(numFloors, numCols)
-    let col_x = x;
-    return colProportions.map((col_p, i) => {
-      let col_w = w/numCols * col_p[i]
-      let col = new Section(col_x, y, col_w, h, random(content), fill_c);
-      col_x += col_w;
-      return col;
-    })
-  }
-
-  // Returns: [[0,0,1,3], [2,1,0,1], [1,1,1,1]]
-  // each nested array represents a floor, and each number represents the proportion of the floor taken up by that section/col
-  generateColProportions(numFloors, numCols) {
+    
+    //create an array populated with the proportion value of each section
+    let floorSections = [];
     let remainder = numCols;
-    let arr = new Array(numCols).fill(0); //create array with length equal to number of columns
-    let r = arr.map(p => { //fill array with random proportion values
-      let value = floor(random(0, remainder + 1))
+    for (let j = 0; j < numCols; j++) {
+      // if it's the last index, we assign the remainder to the last index
+      let value = j === numCols - 1 ? remainder : floor(random(0, remainder + 1));
       remainder -= value;
-      return value;
-    })
-    if (remainder > 0) r[r.length - 1] += remainder //assign any remaining value to last index
-    if (random([0,1])) shuffleArray(r); //randomly shuffle order
-    return new Array(numFloors).fill(r) //return array of arrays 
-  }
-
-  drawFullHouseForTesting(bool){
-    // If things are working correctly, should see a 5px red border
-    if(bool){
-      fill("red");
-      rect(this.x-5, height - this.h-5, this.w+10, this.h+10);
-      noFill();
+      floorSections.push(value);
     }
+    
+    //Use the proportion values generated above to calculate the actual width of each section
+    let sx = x;
+    return floorSections.map((sectionSize) => {
+      let sw = (w/numCols) * sectionSize
+      let floorSection = new FloorSection({
+        x:sx, y, w:sw, h, 
+        content: random(content), 
+        fill_c
+      });
+      sx += sw;
+      return floorSection;
+    })
   }
 
-  draw() {
-    this.drawFullHouseForTesting(false)
-    this.floors.forEach(floor => floor.draw());
-  }
-}
-
-class Floor {
-  constructor (x, y, w, h, cols, i) {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-    this.cols = cols;
-    this.i = i;
-    this.fills = [color(23, 100, 94), color(163, 100, 84), color(324, 100, 94), color(14, 100, 87), color(84, 100, 87), color(204, 100, 87), color(294, 100, 87)];
-  }
-
-  setStyles() {
-    stroke("black");
-    // fill(this.fills[this.i])
-
-  }
-
-  unSetStyles() {
-    noStroke();
+  drawFullHouseForTesting(){
+    // this doesnt work at the moment
+    let {x,y,w,h} = this;
+    fill("red");
+    rect(x-5, ch-y-5, w+10, h+10);
     noFill();
   }
 
+  drawFloors() {
+    let {allFloors} = this;
+    allFloors.forEach(floor => {
+      floor.forEach(floor_section => {
+        if(floor_section.w) floor_section.draw();
+      })
+    });
+  }
+
   draw() {
-    let {x,y,w,h} = this;
-    this.setStyles()
-    // marker_rect_outline(this.x, this.y, this.w, this.h, color(40, 59, 79), this.fills[this.i])
-    // rect(x,y,w,h)
-    this.unSetStyles()
-      
-    this.cols.forEach((col) => {
-      if (col.w) col.draw()
-    })
+    this.drawFloors();
+    if (false) this.drawFullHouseForTesting();
   }
 }
 
-class Section {
-  constructor(x, y, w, h, content, fill_c="yellow", stroke_c = "black"){
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-    this.content = content;
-    this.stroke_c = stroke_c;
-    this.fill_c = fill_c;
-    this.originalColor = this.fill_c
-    this.darkenedColor = color(
-      hue(this.originalColor), 
-      saturation(this.originalColor), 
-      max(0, lightness(this.originalColor) - 10)
-    );
+class FloorSection {
+  constructor({x, y, w, h, content, fill_c="yellow", stroke_c = "black"}){
+    let fill_c_dark = color(hue(fill_c), saturation(fill_c), max(0, lightness(fill_c) - 10));
+    Object.assign(this, {x, y, w, h, content, stroke_c, fill_c, fill_c_dark})
   }
 
   setStyles() {
-    stroke(this.stroke_c)
-    fill(this.fill_c)
+    let {fill_c, stroke_c} = this;
+    stroke(stroke_c)
+    fill(fill_c)
   }
 
   unSetStyles() {
     noStroke();
     noFill()
+  }
+
+  drawFloorBG() {
+    let {x,y,w,h} = this;
+    rect(x,y,w,h)
+  }
+
+  drawContent() {
+    let {x, y, w, h, fill_c_dark, content, i} = this;
+    switch (content) {
+      case "door":
+        drawDoor(x, y, w, h, fill_c_dark)
+        break;
+      case "window":
+        drawWindow(x, y, w, h, fill_c_dark)
+        break;
+      case "circle":
+        drawWindow(x, y, w, h, fill_c_dark)
+        break;
+      default:
+        console.error("Section content does not exist:", content, i)
+        break;
+    }
   }
 
   drawShadows() {
@@ -258,41 +238,13 @@ class Section {
     blendMode(BLEND); // Reset blend mode to default
   }
 
-  drawFloorbg() {
-    let {x,y,w,h, originalColor, darkenedColor} = this;
-    fill(this.originalColor)
-    noStroke()
-    rect(x,y,w,h)
-    noFill()
-    noStroke()
-  }
-
-  drawContent() {
-    let {originalColor, darkenedColor} = this;
-    switch (this.content) {
-      case "door":
-        drawDoor(this.x, this.y, this.w, this.h, darkenedColor)
-        break;
-      case "window":
-        drawWindow(this.x, this.y, this.w, this.h, darkenedColor)
-        break;
-      case "circle":
-        drawWindow(this.x, this.y, this.w, this.h, darkenedColor)
-        break;
-      default:
-        console.error("Section content does not exist:", this.content, this.i)
-        break;
-    }
-  }
-
   draw () {
     if (this.h !== 0 && this.w !== 0) {
       this.setStyles();
-      // marker_rect(this.x, this.y, this.w, this.h, this.fill_c);
-      this.unSetStyles();
-      this.drawFloorbg();
+      this.drawFloorBG();
       this.drawContent();
       this.drawShadows();
+      this.unSetStyles();
     }
   }
 }
