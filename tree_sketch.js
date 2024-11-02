@@ -7,12 +7,12 @@ let trees = []
 function setup() {
   createCanvas(cw, ch);
   colorMode(HSL);
-  let numTrees = 10
+  let numTrees = random(1,5)
   let center = {x:cw/2, y:ch-bottom}
   
   for (let i = 0; i < numTrees; i++) {
     let numLines = floor(random(5,21));
-    let startPoint = {x: random(center.x-(cw/2), center.x+(cw/2)), y: center.y};
+    let startPoint = {x: random(center.x-(cw/2 - 100), center.x+(cw/2 - 100)), y: center.y};
     let treeHeight = random(100,200);
     let treeWidth = random(100,200)
     let tree = new Tree({numLines, startPoint, treeHeight, treeWidth})
@@ -21,14 +21,75 @@ function setup() {
 }
 
 function draw() {
-  background("antiquewhite");
-  trees.forEach(tree => tree.draw()); //Draw the Tree(s)
+  // background(202, 50, 95); //cool blue
+  background(38, 59, 87)
+  noLoop();
+  
+  //Draw Trees & Leaves
+  stroke(5, 42, 12);
+  strokeWeight(2);
+  noFill()
+  trees.forEach(tree => {
+    tree.drawTree();
+    tree.drawLeaves();
+  }); 
+
+  //Draw Base Line
+  stroke(5, 42, 12);
+  strokeWeight(1);
+  drawBaseLine(100, ch-bottom, cw-100)
+}
+
+function drawBaseLine(xStart, y, xEnd){
+  let x = xStart;
+  
+  strokeWeight(2)
+  while (x < xEnd){
+    let tickLength;
+    let tickBump = random(-6, 0);
+    let tickType = random(["long", "long", "short", "space"]);
+
+    if(tickType === "long"){
+      tickLength = random(10, 25);
+      beginShape();
+      vertex(x, y, 0);
+      let x2 = x;
+      let y2 = y;
+      let cx1 = x + tickLength / 2;
+      let cy1 = y + tickBump;
+      let cx2 = x + tickLength;
+      let cy2 = y;
+      bezierVertex(x2, y2, cx1, cy1, cx2, cy2);
+      endShape();
+    }
+    else if(tickType === "short"){
+      tickLength = random(3, 10);
+      beginShape();
+      vertex(x, y, 0);
+      let x2 = x;
+      let y2 = y;
+      let cx1 = x + tickLength / 2;
+      let cy1 = y + tickBump;
+      let cx2 = x + tickLength;
+      let cy2 = y;
+      bezierVertex(x2, y2, cx1, cy1, cx2, cy2);
+      endShape();
+    }
+    else if(tickType === "space"){
+      tickLength = random(5,10)
+    } 
+    else {
+      console.error("no such line type")
+    }
+
+    x += tickLength;
+  }
 }
 
 class Tree {
   constructor({numLines, startPoint, treeHeight, treeWidth}){
     Object.assign(this, { numLines, startPoint, treeHeight, treeWidth });
-    this.lines = this.generateTree()
+    this.lines = this.generateTree();
   }
 
   generateTree() {
@@ -54,14 +115,53 @@ class Tree {
     return lines;
   }
 
-  draw(){
+  drawLeaves() {
+    let {startPoint, treeHeight} = this;
+
+    // Draw everything within a push-pop block to apply rotation to this block only
+    push();
+    translate(startPoint.x, startPoint.y-(bottom/2)-(treeHeight));
+    rotate(radians(-90));
+    // Draw the large white circle
+    let radius = random(125, 150);
+    noFill()
+    noStroke()
+    // fill(255); // White color for the large circle
+    ellipse(0, 0, radius, radius);
+
+    // Draw small half-circles on the right half only
+    let numCircles = 900; // Number of small half-circles
+    for (let i = 0; i < numCircles; i++) {
+      // Random angle between 0 and PI for the right half
+      let angle = random(-PI, PI);
+      // Random radius within the main circle's radius
+      let r = sqrt(random(0,0.5)) * radius;
+      let x = cos(angle) * r;
+      let y = sin(angle) * r;
+      // Calculate the angle of the half-circle to face the center
+      let angleToCenter = atan2(y, x);
+
+      // Draw the half-circle
+      fill(random([
+        color(44, 59, 77), 
+        color(35, 45, 47),
+        color(19, 66, 66),
+        color(86, 38, 55)
+      ]))
+      stroke("black")
+      let w = random(10,20)
+      let h = random(10,20)
+      arc(x, y, w, h, angleToCenter - HALF_PI, angleToCenter + HALF_PI);
+    }
+    pop();
+  }
+
+  drawTree(){
+    //Draw Tree Branches
     this.lines.forEach(l => {
       let {startPoint, controlPoints, endPoint} = l
-  
+
       //Style the line
-      stroke(color(15, 50, 56,))
-      strokeWeight(2);
-      noFill()
       beginShape();
       vertex(startPoint.x, startPoint.y)
       bezierVertex(
@@ -96,6 +196,7 @@ class Tree {
 
   clear() {
     this.lines = []
+    background("white")
   }
 }
 
